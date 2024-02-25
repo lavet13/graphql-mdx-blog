@@ -8,21 +8,16 @@ export default gql`
   input PostInput {
     title: String!
     content: String!
-    author: UserInput!
-  }
-
-  input UserInput {
-    name: String!
-    email: String!
+    authorId: ID!
   }
 
   input CommentInput {
     text: String!
-    author: UserInput
+    authorId: ID!
   }
 
   type Query {
-    posts: [Post!]!
+    posts(filterNeedle: String): [Post!]!
     postById(postId: ID!): Post
     authorById(authorId: ID!): User
     postComments(postId: ID!): [Comment!]!

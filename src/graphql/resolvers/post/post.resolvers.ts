@@ -1,4 +1,5 @@
 import { ContentLimit, Resolvers } from '../../__generated__/types';
+import { Prisma } from '@prisma/client';
 
 import DateScalar from '../../scalars/date.scalars';
 
@@ -27,14 +28,24 @@ const resolvers: Resolvers = {
   Date: DateScalar,
 
   Query: {
-    posts(_, __, context) {
-      return context.prisma.post.findMany();
+    posts(_, args, context) {
+      const filterNeedle = args.filterNeedle;
+      const where: Prisma.PostWhereInput = filterNeedle ? {
+        OR: [
+          { title: { contains: filterNeedle } },
+          { content: { contains: filterNeedle } },
+        ],
+      } : {};
+
+      return context.prisma.post.findMany({ where });
     },
     postById(_, args, context) {
       const postId = parseIntSafe(args.postId);
 
-      if(postId === null) {
-        return Promise.reject(new GraphQLError(`Invalid postId. Please provide a valid integer.`))
+      if (postId === null) {
+        return Promise.reject(
+          new GraphQLError(`Invalid postId. Please provide a valid integer.`),
+        );
       }
 
       return context.prisma.post.findUnique({
@@ -46,8 +57,10 @@ const resolvers: Resolvers = {
     authorById(_, args, context) {
       const authorId = parseIntSafe(args.authorId);
 
-      if(authorId === null) {
-        return Promise.reject(new GraphQLError(`Invalid authorId. Please provide a valid integer.`))
+      if (authorId === null) {
+        return Promise.reject(
+          new GraphQLError(`Invalid authorId. Please provide a valid integer.`),
+        );
       }
 
       return context.prisma.user.findUnique({
@@ -59,8 +72,10 @@ const resolvers: Resolvers = {
     postComments(_, args, context) {
       const postId = parseIntSafe(args.postId);
 
-      if(postId === null) {
-        return Promise.reject(new GraphQLError(`Invalid postId. Please provide a valid integer.`))
+      if (postId === null) {
+        return Promise.reject(
+          new GraphQLError(`Invalid postId. Please provide a valid integer.`),
+        );
       }
 
       return context.prisma.comment.findMany({
@@ -72,8 +87,10 @@ const resolvers: Resolvers = {
     authorComments(_, args, context) {
       const authorId = parseIntSafe(args.authorId);
 
-      if(authorId === null) {
-        return Promise.reject(new GraphQLError(`Invalid authorId. Please provide a valid integer.`))
+      if (authorId === null) {
+        return Promise.reject(
+          new GraphQLError(`Invalid authorId. Please provide a valid integer.`),
+        );
       }
 
       return context.prisma.comment.findMany({
@@ -113,40 +130,51 @@ const resolvers: Resolvers = {
     // },
   },
   Mutation: {
-    // createPost(_, args) {
-    //   const { author: authorInput, ...postInput } = args.postInput;
-    //
-    //   const newAuthor = { ...authorInput, id: uuidv4() };
-    //   const newPost = {
-    //     ...postInput,
-    //     id: uuidv4(),
-    //     preview: postInput.content,
-    //     comments: [],
-    //     author: newAuthor,
-    //   };
-    //   posts.push(newPost);
-    //
-    //   return newPost;
-    // },
-    // addComment(_, args) {
-    //   const postId = args.postId;
-    //   const commentInput = args.commentInput;
-    //   const imposterAuthor = args.commentInput.author;
-    //
-    //   const post = posts.find(p => p.id === postId);
-    //   const existingAuthor = post!.author;
-    //   const newComment = {
-    //     ...commentInput,
-    //     id: uuidv4(),
-    //     author: imposterAuthor
-    //       ? { id: uuidv4(), ...imposterAuthor }
-    //       : existingAuthor,
-    //   };
-    //
-    //   post!.comments.push(newComment);
-    //
-    //   return newComment;
-    // },
+    async createPost(_, args, context) {
+      const { title, content, authorId } = args.postInput;
+      const id = parseIntSafe(authorId);
+
+      if(id === null) {
+        return Promise.reject(new GraphQLError(`Invalid authorId. Please provide a valid integer.`));
+      }
+
+      const newPost = await context.prisma.post.create({
+        data: {
+          authorId: id,
+          title,
+          content,
+        },
+      })
+
+      return newPost;
+    },
+    async addComment(_, args, context) {
+      const postId = parseIntSafe(args.postId);
+      const authorId = parseIntSafe(args.commentInput.authorId);
+      const text = args.commentInput.text;
+
+      if (postId === null) {
+        return Promise.reject(
+          new GraphQLError(`Invalid postId. Please provide a valid integer.`),
+        );
+      }
+
+      if (authorId === null) {
+        return Promise.reject(
+          new GraphQLError(`Invalid authorId. Please provide a valid integer.`),
+        );
+      }
+
+      const newComment = await context.prisma.comment.create({
+        data: {
+          postId,
+          userId: authorId,
+          text,
+        },
+      });
+
+      return newComment;
+    },
   },
   // SearchResultPA: {
   //   __resolveType(parent) {
