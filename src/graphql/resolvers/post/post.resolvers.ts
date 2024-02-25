@@ -1,13 +1,12 @@
 import { ContentLimit, Resolvers } from '../../__generated__/types';
+
+import { GraphQLError } from 'graphql';
 import { Prisma } from '@prisma/client';
 
 import DateScalar from '../../scalars/date.scalars';
 
 import { parseIntSafe } from '../../../utils/resolvers/parseIntSafe';
 
-import { GraphQLError } from 'graphql';
-
-// import { v4 as uuidv4 } from 'uuid';
 
 // const posts: Post[] = [
 //   {
@@ -131,16 +130,25 @@ const resolvers: Resolvers = {
   },
   Mutation: {
     async createPost(_, args, context) {
-      const { title, content, authorId } = args.postInput;
-      const id = parseIntSafe(authorId);
+      const { title, content } = args.postInput;
+      const authorId = parseIntSafe(args.postInput.authorId);
+      const categoryId = parseIntSafe(args.postInput.categoryId);
 
-      if(id === null) {
+      if(authorId === null) {
         return Promise.reject(new GraphQLError(`Invalid authorId. Please provide a valid integer.`));
+      }
+      if(categoryId === null) {
+        return Promise.reject(new GraphQLError(`Invalid categoryId. Please provide a valid integer.`));
       }
 
       const newPost = await context.prisma.post.create({
         data: {
-          authorId: id,
+          categories: {
+            connect: {
+              id: categoryId,
+            },
+          },
+          authorId,
           title,
           content,
         },
@@ -149,7 +157,7 @@ const resolvers: Resolvers = {
       return newPost;
     },
     async addComment(_, args, context) {
-      const postId = parseIntSafe(args.postId);
+      const postId = parseIntSafe(args.commentInput.postId);
       const authorId = parseIntSafe(args.commentInput.authorId);
       const text = args.commentInput.text;
 
@@ -175,18 +183,74 @@ const resolvers: Resolvers = {
 
       return newComment;
     },
+    async addProfile(_, args, context) {
+      const { bio } = args.profileInput;
+      const authorId = parseIntSafe(args.profileInput.userId);
+
+      if (authorId === null) {
+        return Promise.reject(
+          new GraphQLError(`Invalid authorId. Please provide a valid integer.`),
+        );
+      }
+
+      const newProfile = await context.prisma.profile.create({
+        data: {
+          userId: authorId,
+          bio,
+        },
+      });
+
+      return newProfile;
+    },
   },
-  // SearchResultPA: {
-  //   __resolveType(parent) {
-  //     if ((parent as Post).content) {
-  //       return 'Post';
-  //     } else if ((parent as Author).email) {
-  //       return 'Author';
-  //     } else {
-  //       throw Error('Unable to resolve type from union type `SearchResultPA`');
-  //     }
-  //   },
-  // },
+  Comment: {
+    post(parent, _, context) {
+      return context.prisma.post.findUniqueOrThrow({
+        where: {
+          id: parent.postId,
+        },
+      });
+    },
+    author(parent, _, context) {
+      return context.prisma.user.findUniqueOrThrow({
+        where: {
+          id: parent.userId,
+        },
+      });
+    }
+  },
+  Profile: {
+    user(parent, _, context) {
+      return context.prisma.user.findUniqueOrThrow({
+        where: {
+          id: parent.userId,
+        },
+      });
+    },
+  },
+  User: {
+    posts(parent, _, context) {
+      return context.prisma.post.findMany({
+        where: {
+          authorId: parent.id,
+        },
+      });
+    },
+    comments(parent, _, context) {
+      return context.prisma.comment.findMany({
+        where: {
+          userId: parent.id,
+        },
+      });
+    },
+    profile(parent, _, context) {
+      return context.prisma.profile.findUnique({
+        where: {
+          userId: parent.id,
+        },
+      });
+    },
+  },
   Post: {
     preview(parent, args) {
       const { size } = args;
@@ -201,7 +265,7 @@ const resolvers: Resolvers = {
       }
     },
     author(parent, _, context) {
-      return context.prisma.user.findUnique({
+      return context.prisma.user.findUniqueOrThrow({
         where: {
           id: parent.authorId,
         },

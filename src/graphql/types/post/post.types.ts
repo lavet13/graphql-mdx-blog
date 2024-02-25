@@ -9,11 +9,18 @@ export default gql`
     title: String!
     content: String!
     authorId: ID!
+    categoryId: ID!
   }
 
   input CommentInput {
     text: String!
     authorId: ID!
+    postId: ID!
+  }
+
+  input ProfileInput {
+    bio: String!
+    userId: ID!
   }
 
   type Query {
@@ -32,8 +39,9 @@ export default gql`
   }
 
   type Mutation {
-    createPost(postInput: PostInput!): Post
-    addComment(postId: ID!, commentInput: CommentInput!): Comment
+    createPost(postInput: PostInput!): Post!
+    addComment(commentInput: CommentInput!): Comment!
+    addProfile(profileInput: ProfileInput!): Profile!
   }
 
   type Post {
@@ -43,7 +51,7 @@ export default gql`
     createdAt: Date!
     updatedAt: Date!
     published: Boolean!
-    author: User
+    author: User!
     preview(size: ContentLimit = MEDIUM): String!
     comments: [Comment!]!
     categories: [Category!]!
