@@ -1,28 +1,30 @@
 import gql from 'graphql-tag';
 
 export default gql`
-  union SearchResultPA = Post | Author
+  scalar Date
+
+  union SearchResultPA = Post | User
 
   input PostInput {
     title: String!
     content: String!
-    author: AuthorInput!
+    author: UserInput!
   }
 
-  input AuthorInput {
+  input UserInput {
     name: String!
     email: String!
   }
 
   input CommentInput {
     text: String!
-    author: AuthorInput
+    author: UserInput
   }
 
   type Query {
     posts: [Post!]!
     postById(postId: ID!): Post
-    authorById(authorId: ID!): Author
+    authorById(authorId: ID!): User
     postComments(postId: ID!): [Comment!]!
     authorComments(authorId: ID!): [Comment]!
     searchPA(query: String!): [SearchResultPA]!
@@ -43,20 +45,48 @@ export default gql`
     id: ID!
     title: String!
     content: String!
+    createdAt: Date!
+    updatedAt: Date!
+    published: Boolean!
+    author: User
     preview(size: ContentLimit = MEDIUM): String!
-    author: Author!
+    comments: [Comment!]!
+    categories: [Category!]!
+  }
+
+  type Category {
+    id: ID!
+    name: String!
+    posts: [Post!]!
+  }
+
+  type User {
+    id: ID!
+    email: String!
+    name: String!
+    role: Role!
+    posts: [Post!]!
+    profile: Profile
     comments: [Comment!]!
   }
 
-  type Author {
+  type Profile {
     id: ID!
-    name: String!
-    email: String!
+    bio: String!
+    user: User!
+  }
+
+  enum Role {
+    USER
+    ADMIN
   }
 
   type Comment {
     id: ID!
     text: String!
-    author: Author!
+    createdAt: Date!
+    updatedAt: Date!
+    author: User!
+    post: Post!
   }
 `;

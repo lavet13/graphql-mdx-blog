@@ -39,7 +39,7 @@ async function bootstrap() {
 
   app.use(import.meta.env.VITE_GRAPHQL_ENDPOINT, yoga);
 
-  await main();
+  // await main();
 
   if (import.meta.env.PROD) {
     app.listen(import.meta.env.VITE_PORT, () => {

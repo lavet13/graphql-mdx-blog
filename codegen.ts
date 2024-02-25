@@ -14,10 +14,13 @@ const config: CodegenConfig = {
   },
 
   config: {
-    // mappers: {
-    //   Link: '../../../node_modules/.prisma/client#Link as LinkModel',
-    //   Comment: '../../../node_modules/.prisma/client#Comment as CommentModel',
-    // },
+    mappers: {
+      Post: '../../../node_modules/.prisma/client#Post as PostModel',
+      Category: '../../../node_modules/.prisma/client#Category as CategoryModel',
+      User: '../../../node_modules/.prisma/client#User as UserModel',
+      Comment: '../../../node_modules/.prisma/client#Comment as CommentModel',
+      Profile: '../../../node_modules/.prisma/client#Profile as ProfileModel',
+    },
     inputMaybeValue: 'undefined | T',
   },
 

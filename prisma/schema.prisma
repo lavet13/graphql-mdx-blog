@@ -11,32 +11,39 @@ datasource db {
 }
 
 model Post {
-  id      Int    @id @default(autoincrement())
-  title   String
-  content String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  published Boolean @default(false)
-  author User @relation(fields: [authorId], references: [id])
-  authorId Int
-  comments Comment[]
+  id         Int        @id @default(autoincrement())
+  title      String
+  content    String
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  published  Boolean    @default(false)
+  author     User       @relation(fields: [authorId], references: [id])
+  authorId   Int
+  comments   Comment[]
+  categories Category[]
+}
+
+model Category {
+  id    Int    @id @default(autoincrement())
+  name  String
+  posts Post[]
 }
 
 model User {
-  id Int @id @default(autoincrement())
-  email String @unique
-  name String?
-  role Role @default(USER)
-  posts Post[]
-  profile Profile?
+  id       Int       @id @default(autoincrement())
+  email    String    @unique
+  name     String
+  role     Role      @default(USER)
+  posts    Post[]
+  profile  Profile?
   comments Comment[]
 }
 
 model Profile {
-  id Int @id @default(autoincrement())
-  bio String
-  user User @relation(fields: [userId], references: [id])
-  userId Int @unique
+  id     Int    @id @default(autoincrement())
+  bio    String
+  user   User   @relation(fields: [userId], references: [id])
+  userId Int    @unique
 }
 
 enum Role {
@@ -45,12 +52,12 @@ enum Role {
 }
 
 model Comment {
-  id Int @id @default(autoincrement())
-  text String
+  id        Int      @id @default(autoincrement())
+  text      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  userId Int
-  postId Int
-  user User @relation(fields: [userId], references: [id])
-  post Post @relation(fields: [postId], references: [id])
+  userId    Int
+  postId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id])
 }
