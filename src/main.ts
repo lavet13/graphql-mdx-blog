@@ -1,15 +1,14 @@
 import 'dotenv/config';
-import { createYoga } from 'graphql-yoga';
 import express from 'express';
 
 import { makeExecutableSchema } from '@graphql-tools/schema';
-// import { useResponseCache } from '@graphql-yoga/plugin-response-cache';
 
-import typeDefs from './graphql/types';
 import resolvers from './graphql/resolvers';
-import main from './script';
+import typeDefs from './graphql/types';
+
+// import main from './script';
 import { createContext } from './context';
-export { type ContextValue } from './context';
+import { createYoga } from 'graphql-yoga';
 
 const schema = makeExecutableSchema({
   typeDefs,
@@ -27,8 +26,8 @@ async function bootstrap() {
     schema,
     context: createContext,
     graphqlEndpoint: import.meta.env.VITE_GRAPHQL_ENDPOINT,
-    graphiql: import.meta.env.MODE === 'development',
-    landingPage: false,
+    graphiql: import.meta.env.DEV,
+    landingPage: import.meta.env.PROD,
     plugins: [
       // useResponseCache({
       //   // global cache
@@ -44,8 +43,9 @@ async function bootstrap() {
   if (import.meta.env.PROD) {
     app.listen(import.meta.env.VITE_PORT, () => {
       console.log(
-        `🚀 Query endpoint ready at http://localhost:${import.meta.env.VITE_PORT
-        }`
+        `🚀 Query endpoint ready at http://localhost:${
+          import.meta.env.VITE_PORT
+        }${import.meta.env.VITE_GRAPHQL_ENDPOINT}`,
       );
     });
   }

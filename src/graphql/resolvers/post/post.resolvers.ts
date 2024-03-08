@@ -1,27 +1,13 @@
-import { ContentLimit, Resolvers } from '../../__generated__/types';
-
 import { GraphQLError } from 'graphql';
 import { Prisma } from '@prisma/client';
+
+import { ContentLimit, Resolvers } from '../../__generated__/types';
 
 import DateScalar from '../../scalars/date.scalars';
 
 import { parseIntSafe } from '../../../utils/resolvers/parseIntSafe';
 
-
-// const posts: Post[] = [
-//   {
-//     id: '0',
-//     title: 'some title!',
-//     author: {
-//       id: '0',
-//       name: 'Ivan',
-//       email: 'ivan@mail.ru',
-//     },
-//     content: 'some content!',
-//     preview: 'some content!',
-//     comments: [],
-//   },
-// ];
+import { createToken, generatePasswordHash, validatePassword } from '../../../auth';
 
 const resolvers: Resolvers = {
   Date: DateScalar,
@@ -129,6 +115,29 @@ const resolvers: Resolvers = {
     // },
   },
   Mutation: {
+    async login(_, args, context) {
+      const login = args.loginInput.login;
+      const argPassword = args.loginInput.password;
+
+      return context.prisma.user.login(login, argPassword);
+    },
+    async signup(_, args, context) {
+      const { email, name, password } = args.signupInput;
+
+      const hashedPassword = await generatePasswordHash(password);
+
+      const newUser = await context.prisma.user.create({
+        data: {
+          email,
+          name,
+          password: hashedPassword,
+        },
+      });
+
+      const token = createToken(newUser, import.meta.env.VITE_SECRET, { expiresIn: '30m' });
+
+      return { token };
+    },
     async createPost(_, args, context) {
       const { title, content } = args.postInput;
       const authorId = parseIntSafe(args.postInput.authorId);
@@ -160,6 +169,12 @@ const resolvers: Resolvers = {
       const postId = parseIntSafe(args.commentInput.postId);
       const authorId = parseIntSafe(args.commentInput.authorId);
       const text = args.commentInput.text;
+
+      if(text.trim().length === 0 || text.trim().length <= 2) {
+        return Promise.reject(
+          new GraphQLError(`Text cannot be empty. Please provide at least 3 characters.`),
+        );
+      }
 
       if (postId === null) {
         return Promise.reject(

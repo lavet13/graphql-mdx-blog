@@ -23,6 +23,17 @@ export default gql`
     userId: ID!
   }
 
+  input LoginInput {
+    login: String!
+    password: String!
+  }
+
+  input SignupInput {
+    email: String!
+    name: String!
+    password: String!
+  }
+
   type Query {
     posts(filterNeedle: String): [Post!]!
     postById(postId: ID!): Post
@@ -32,16 +43,22 @@ export default gql`
     searchPA(query: String!): [SearchResultPA]!
   }
 
+  type Mutation {
+    createPost(postInput: PostInput!): Post!
+    addComment(commentInput: CommentInput!): Comment!
+    addProfile(profileInput: ProfileInput!): Profile!
+    login(loginInput: LoginInput!): AuthPayload!
+    signup(signupInput: SignupInput!): AuthPayload!
+  }
+
   enum ContentLimit {
     SMALL
     MEDIUM
     LARGE
   }
 
-  type Mutation {
-    createPost(postInput: PostInput!): Post!
-    addComment(commentInput: CommentInput!): Comment!
-    addProfile(profileInput: ProfileInput!): Profile!
+  type AuthPayload {
+    token: String!
   }
 
   type Post {
