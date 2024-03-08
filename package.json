@@ -23,6 +23,9 @@
     "name": "Ivan Skinder",
     "email": "lavet13@mail.ru"
   },
+  "prisma": {
+    "schema": "./src/prisma/schema.prisma"
+  },
   "license": "MIT",
   "devDependencies": {
     "@graphql-codegen/cli": "^5.0.0",

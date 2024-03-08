@@ -30,9 +30,7 @@
     "strictPropertyInitialization": false /* this option was crucial like deadass im spend almost 2hours LULE */,
 
     "outDir": "dist",
-    "rootDir": "src",
-    "baseUrl": "."
+    "rootDir": "src"
   },
-  "exclude": ["dist", "node_modules", "./src/graphql/__generated"],
-  "include": ["src"]
+  "exclude": ["dist", "node_modules"]
 }

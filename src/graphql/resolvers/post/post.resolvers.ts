@@ -7,20 +7,20 @@ import DateScalar from '../../scalars/date.scalars';
 
 import { parseIntSafe } from '../../../utils/resolvers/parseIntSafe';
 
-import { createToken, generatePasswordHash, validatePassword } from '../../../auth';
-
 const resolvers: Resolvers = {
   Date: DateScalar,
 
   Query: {
     posts(_, args, context) {
       const filterNeedle = args.filterNeedle;
-      const where: Prisma.PostWhereInput = filterNeedle ? {
-        OR: [
-          { title: { contains: filterNeedle } },
-          { content: { contains: filterNeedle } },
-        ],
-      } : {};
+      const where: Prisma.PostWhereInput = filterNeedle
+        ? {
+            OR: [
+              { title: { contains: filterNeedle } },
+              { content: { contains: filterNeedle } },
+            ],
+          }
+        : {};
 
       return context.prisma.post.findMany({ where });
     },
@@ -116,38 +116,31 @@ const resolvers: Resolvers = {
   },
   Mutation: {
     async login(_, args, context) {
-      const login = args.loginInput.login;
-      const argPassword = args.loginInput.password;
+      const { login, password } = args.loginInput;
 
-      return context.prisma.user.login(login, argPassword);
+      return context.prisma.user.login(login, password);
     },
     async signup(_, args, context) {
       const { email, name, password } = args.signupInput;
 
-      const hashedPassword = await generatePasswordHash(password);
-
-      const newUser = await context.prisma.user.create({
-        data: {
-          email,
-          name,
-          password: hashedPassword,
-        },
-      });
-
-      const token = createToken(newUser, import.meta.env.VITE_SECRET, { expiresIn: '30m' });
-
-      return { token };
+      return context.prisma.user.signup(email, name, password);
     },
     async createPost(_, args, context) {
       const { title, content } = args.postInput;
       const authorId = parseIntSafe(args.postInput.authorId);
       const categoryId = parseIntSafe(args.postInput.categoryId);
 
-      if(authorId === null) {
-        return Promise.reject(new GraphQLError(`Invalid authorId. Please provide a valid integer.`));
+      if (authorId === null) {
+        return Promise.reject(
+          new GraphQLError(`Invalid authorId. Please provide a valid integer.`),
+        );
       }
-      if(categoryId === null) {
-        return Promise.reject(new GraphQLError(`Invalid categoryId. Please provide a valid integer.`));
+      if (categoryId === null) {
+        return Promise.reject(
+          new GraphQLError(
+            `Invalid categoryId. Please provide a valid integer.`,
+          ),
+        );
       }
 
       const newPost = await context.prisma.post.create({
@@ -161,7 +154,7 @@ const resolvers: Resolvers = {
           title,
           content,
         },
-      })
+      });
 
       return newPost;
     },
@@ -170,9 +163,11 @@ const resolvers: Resolvers = {
       const authorId = parseIntSafe(args.commentInput.authorId);
       const text = args.commentInput.text;
 
-      if(text.trim().length === 0 || text.trim().length <= 2) {
+      if (text.trim().length === 0 || text.trim().length <= 2) {
         return Promise.reject(
-          new GraphQLError(`Text cannot be empty. Please provide at least 3 characters.`),
+          new GraphQLError(
+            `Text cannot be empty. Please provide at least 3 characters.`,
+          ),
         );
       }
 
@@ -232,7 +227,7 @@ const resolvers: Resolvers = {
           id: parent.userId,
         },
       });
-    }
+    },
   },
   Profile: {
     user(parent, _, context) {
