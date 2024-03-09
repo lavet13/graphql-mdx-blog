@@ -5,17 +5,6 @@ export default gql`
 
   union SearchResultPA = Post | User
 
-  input PostInput {
-    title: String!
-    content: String!
-    categoryId: ID!
-  }
-
-  input CommentInput {
-    text: String!
-    postId: ID!
-  }
-
   input ProfileInput {
     bio: String!
   }
@@ -41,9 +30,10 @@ export default gql`
   }
 
   type Mutation {
-    createPost(postInput: PostInput!): Post!
-    addComment(commentInput: CommentInput!): Comment!
-    addProfile(profileInput: ProfileInput!): Profile!
+    createPost(title: String!, content: String!, categoryId: ID!): Post!
+    addComment(text: String!, postId: ID!): Comment!
+    updateComment(text: String!, id: ID!): Comment!
+    upsertProfile(profileInput: ProfileInput!): Profile!
     addCategory(name: String!): Category!
     login(loginInput: LoginInput!): AuthPayload!
     signup(signupInput: SignupInput!): AuthPayload!

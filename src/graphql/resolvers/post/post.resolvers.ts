@@ -6,9 +6,18 @@ import { ContentLimit, Resolvers } from '../../__generated__/types';
 import DateScalar from '../../scalars/date.scalars';
 
 import { parseIntSafe } from '../../../utils/resolvers/parseIntSafe';
-import { ResolversComposerMapping, composeResolvers } from '@graphql-tools/resolvers-composition';
+import {
+  ResolversComposerMapping,
+  composeResolvers,
+} from '@graphql-tools/resolvers-composition';
 import { isAuthenticated } from '../../composition/authorization';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import {
+  validPostId,
+  validCommentId,
+  validAuthorId,
+  validCategoryId,
+} from '../../composition/validIds';
 
 const resolvers: Resolvers = {
   Date: DateScalar,
@@ -129,41 +138,39 @@ const resolvers: Resolvers = {
       return context.prisma.user.signup(email, name, password);
     },
     async createPost(_, args, context) {
-      const { title, content } = args.postInput;
-      const authorId = parseIntSafe(context.me!.id);
-      const categoryId = parseIntSafe(args.postInput.categoryId);
+      const { title, content } = args;
+      const authorId = context.me!.id;
+      const categoryId = parseInt(args.categoryId);
 
-      if (authorId === null) {
-        return Promise.reject(
-          new GraphQLError(`Invalid authorId. Please provide a valid integer.`),
-        );
-      }
-      if (categoryId === null) {
-        return Promise.reject(
-          new GraphQLError(
-            `Invalid categoryId. Please provide a valid integer.`,
-          ),
-        );
-      }
-
-      const newPost = await context.prisma.post.create({
-        data: {
-          categories: {
-            connect: {
-              id: categoryId,
+      const newPost = await context.prisma.post
+        .create({
+          data: {
+            categories: {
+              connect: {
+                id: categoryId,
+              },
             },
+            author: {
+              connect: {
+                id: authorId,
+              },
+            },
+            title,
+            content,
           },
-          authorId,
-          title,
-          content,
-        },
-      }).catch((err: unknown) => {
-        if(err instanceof PrismaClientKnownRequestError && err.code === 'P2025') {
-          return Promise.reject(new GraphQLError(`Cannot find categoryId \`${categoryId}\``))
-        }
+        })
+        .catch((err: unknown) => {
+          if (
+            err instanceof PrismaClientKnownRequestError &&
+            err.code === 'P2025'
+          ) {
+            return Promise.reject(
+              new GraphQLError(`Cannot find categoryId \`${categoryId}\``),
+            );
+          }
 
-        return Promise.reject(err);
-      });
+          return Promise.reject(err);
+        });
 
       return newPost;
     },
@@ -177,9 +184,9 @@ const resolvers: Resolvers = {
       });
     },
     async addComment(_, args, context) {
-      const postId = parseIntSafe(args.commentInput.postId);
-      const authorId = parseIntSafe(context.me!.id);
-      const text = args.commentInput.text;
+      const postId = parseInt(args.postId, 10);
+      const authorId = context.me!.id;
+      const text = args.text;
 
       if (text.trim().length === 0 || text.trim().length <= 2) {
         return Promise.reject(
@@ -189,46 +196,69 @@ const resolvers: Resolvers = {
         );
       }
 
-      if (postId === null) {
-        return Promise.reject(
-          new GraphQLError(`Invalid postId. Please provide a valid integer.`),
-        );
-      }
+      const newComment = await context.prisma.comment
+        .create({
+          data: {
+            postId,
+            userId: authorId,
+            text,
+          },
+        })
+        .catch((err: unknown) => {
+          if (
+            err instanceof PrismaClientKnownRequestError &&
+            err.code === 'P2003'
+          ) {
+            return Promise.reject(
+              new GraphQLError(`Cannot find post with id \`${postId}\``),
+            );
+          }
 
-      if (authorId === null) {
-        return Promise.reject(
-          new GraphQLError(`Invalid authorId. Please provide a valid integer.`),
-        );
-      }
-
-      const newComment = await context.prisma.comment.create({
-        data: {
-          postId,
-          userId: authorId,
-          text,
-        },
-      });
+          return Promise.reject(err);
+        });
 
       return newComment;
     },
-    async addProfile(_, args, context) {
+    async updateComment(_, args, context) {
+      const id = parseInt(args.id, 10);
+      const text = args.text;
+
+      return context.prisma.comment
+        .update({
+          where: {
+            id,
+          },
+          data: {
+            text,
+          },
+        })
+        .catch((err: unknown) => {
+          if (
+            err instanceof PrismaClientKnownRequestError &&
+            err.code === 'P2025'
+          ) {
+            return Promise.reject(
+              new GraphQLError(`Cannot find the comment with id \`${id}\``),
+            );
+          }
+          return Promise.reject(err);
+        });
+    },
+    async upsertProfile(_, args, context) {
       const { bio } = args.profileInput;
-      const authorId = parseIntSafe(context.me!.id);
 
-      if (authorId === null) {
-        return Promise.reject(
-          new GraphQLError(`Invalid authorId. Please provide a valid integer.`),
-        );
-      }
-
-      const newProfile = await context.prisma.profile.create({
-        data: {
-          userId: authorId,
+      return context.prisma.profile.upsert({
+        where: {
+          userId: context.me!.id,
+        },
+        update: {
           bio,
         },
+        create: {
+          bio,
+          userId: context.me!.id,
+        },
       });
-
-      return newProfile;
     },
   },
   Comment: {
@@ -323,9 +353,14 @@ const resolvers: Resolvers = {
 };
 
 const resolversComposition: ResolversComposerMapping<Resolvers> = {
-  'Mutation.createPost': [isAuthenticated()],
-  'Mutation.addComment': [isAuthenticated()],
-  'Mutation.addProfile': [isAuthenticated()],
+  'Mutation.createPost': [
+    isAuthenticated(),
+    validAuthorId(),
+    validCategoryId(),
+  ],
+  'Mutation.addComment': [isAuthenticated(), validPostId(), validAuthorId()],
+  'Mutation.updateComment': [isAuthenticated(), validCommentId()],
+  'Mutation.upsertProfile': [isAuthenticated(), validAuthorId()],
 };
 
 export default composeResolvers(resolvers, resolversComposition);

@@ -33,7 +33,7 @@ const userExtension = Prisma.defineExtension(client => {
             throw new GraphQLError('Invalid password!');
           }
 
-          const token = createToken(user, { expiresIn: '30m' });
+          const token = createToken(user, { expiresIn: '24h' });
 
           return { token };
         },
@@ -48,7 +48,7 @@ const userExtension = Prisma.defineExtension(client => {
             },
           });
 
-          const token = createToken(newUser, { expiresIn: '30m' });
+          const token = createToken(newUser, { expiresIn: '24h' });
 
           return { token };
         },

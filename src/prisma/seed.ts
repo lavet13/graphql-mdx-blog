@@ -1,6 +1,5 @@
 import prisma from './prisma';
 import generatePasswordHash from '../utils/auth/generate-password-hash';
-import inspect from '../utils/debug/inspect';
 
 export default async function seed() {
   const password = 'negr';
@@ -24,31 +23,19 @@ export default async function seed() {
       email: 'negr@mail.ru',
       name: 'negr',
       password: hash,
-    },
-  });
-
-  const post = await prisma.post.upsert({
-    where: {
-      authorId: user.id,
-    },
-    update: {},
-    create: {
-      title: 'some title',
-      content: 'some content',
-      author: {
-        connect: {
-          id: user.id,
-        },
-      },
-      categories: {
-        connect: {
-          id: category.id,
+      posts: {
+        create: {
+          title: 'some title',
+          content: 'content...',
+          categories: {
+            connect: {
+              id: category.id,
+            },
+          },
         },
       },
     },
   });
 
-  console.log({ user, post, category });
-
-  inspect({ user, post, category });
+  console.log({ user, category });
 }
