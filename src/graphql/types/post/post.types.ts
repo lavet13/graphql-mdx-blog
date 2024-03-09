@@ -8,19 +8,16 @@ export default gql`
   input PostInput {
     title: String!
     content: String!
-    authorId: ID!
     categoryId: ID!
   }
 
   input CommentInput {
     text: String!
-    authorId: ID!
     postId: ID!
   }
 
   input ProfileInput {
     bio: String!
-    userId: ID!
   }
 
   input LoginInput {
@@ -47,6 +44,7 @@ export default gql`
     createPost(postInput: PostInput!): Post!
     addComment(commentInput: CommentInput!): Comment!
     addProfile(profileInput: ProfileInput!): Profile!
+    addCategory(name: String!): Category!
     login(loginInput: LoginInput!): AuthPayload!
     signup(signupInput: SignupInput!): AuthPayload!
   }

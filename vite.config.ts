@@ -7,7 +7,7 @@ import dynamicImport from 'vite-plugin-dynamic-import';
 export default defineConfig({
   server: {
     port: 3699,
-    open: true,
+    // open: true,
   },
   build: {
     minify: true,

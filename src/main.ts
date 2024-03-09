@@ -6,7 +6,7 @@ import { makeExecutableSchema } from '@graphql-tools/schema';
 import resolvers from './graphql/resolvers';
 import typeDefs from './graphql/types';
 
-// import main from './script';
+import seed from './prisma/seed';
 import { createContext } from './context';
 import { createYoga } from 'graphql-yoga';
 
@@ -38,7 +38,7 @@ async function bootstrap() {
 
   app.use(import.meta.env.VITE_GRAPHQL_ENDPOINT, yoga);
 
-  // await main();
+  await seed();
 
   if (import.meta.env.PROD) {
     app.listen(import.meta.env.VITE_PORT, () => {

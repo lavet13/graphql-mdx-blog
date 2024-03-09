@@ -6,6 +6,9 @@ import { ContentLimit, Resolvers } from '../../__generated__/types';
 import DateScalar from '../../scalars/date.scalars';
 
 import { parseIntSafe } from '../../../utils/resolvers/parseIntSafe';
+import { ResolversComposerMapping, composeResolvers } from '@graphql-tools/resolvers-composition';
+import { isAuthenticated } from '../../composition/authorization';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 const resolvers: Resolvers = {
   Date: DateScalar,
@@ -127,7 +130,7 @@ const resolvers: Resolvers = {
     },
     async createPost(_, args, context) {
       const { title, content } = args.postInput;
-      const authorId = parseIntSafe(args.postInput.authorId);
+      const authorId = parseIntSafe(context.me!.id);
       const categoryId = parseIntSafe(args.postInput.categoryId);
 
       if (authorId === null) {
@@ -154,13 +157,28 @@ const resolvers: Resolvers = {
           title,
           content,
         },
+      }).catch((err: unknown) => {
+        if(err instanceof PrismaClientKnownRequestError && err.code === 'P2025') {
+          return Promise.reject(new GraphQLError(`Cannot find categoryId \`${categoryId}\``))
+        }
+
+        return Promise.reject(err);
       });
 
       return newPost;
     },
+    async addCategory(_, args, context) {
+      const name = args.name;
+
+      return context.prisma.category.create({
+        data: {
+          name,
+        },
+      });
+    },
     async addComment(_, args, context) {
       const postId = parseIntSafe(args.commentInput.postId);
-      const authorId = parseIntSafe(args.commentInput.authorId);
+      const authorId = parseIntSafe(context.me!.id);
       const text = args.commentInput.text;
 
       if (text.trim().length === 0 || text.trim().length <= 2) {
@@ -195,7 +213,7 @@ const resolvers: Resolvers = {
     },
     async addProfile(_, args, context) {
       const { bio } = args.profileInput;
-      const authorId = parseIntSafe(args.profileInput.userId);
+      const authorId = parseIntSafe(context.me!.id);
 
       if (authorId === null) {
         return Promise.reject(
@@ -304,4 +322,10 @@ const resolvers: Resolvers = {
   },
 };
 
-export default resolvers;
+const resolversComposition: ResolversComposerMapping<Resolvers> = {
+  'Mutation.createPost': [isAuthenticated()],
+  'Mutation.addComment': [isAuthenticated()],
+  'Mutation.addProfile': [isAuthenticated()],
+};
+
+export default composeResolvers(resolvers, resolversComposition);
