@@ -6,9 +6,9 @@ const createToken = (
   user: User,
   options: SignOptions,
 ) => {
-  const { id, email, name } = user;
+  const { id } = user;
 
-  return jwt.sign({ id, email, name }, import.meta.env.VITE_SECRET, options);
+  return jwt.sign({ id }, import.meta.env.VITE_SECRET, options);
 };
 
 export default createToken;

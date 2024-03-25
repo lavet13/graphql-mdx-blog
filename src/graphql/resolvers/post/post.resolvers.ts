@@ -1,5 +1,5 @@
 import { GraphQLError } from 'graphql';
-import { Prisma } from '@prisma/client';
+import { Post, Prisma, User } from '@prisma/client';
 
 import { ContentLimit, Resolvers } from '../../__generated__/types';
 
@@ -15,28 +15,64 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import {
   validPostId,
   validCommentId,
-  validAuthorId,
   validCategoryId,
 } from '../../composition/validIds';
+import { applyConstraints } from '../../../utils/resolvers/applyConstraints';
 
 const resolvers: Resolvers = {
   Date: DateScalar,
 
   Query: {
-    posts(_, args, context) {
-      const filterNeedle = args.filterNeedle;
-      const where: Prisma.PostWhereInput = filterNeedle
-        ? {
-            OR: [
-              { title: { contains: filterNeedle } },
-              { content: { contains: filterNeedle } },
-            ],
-          }
-        : {};
+    async posts(_, args, context) {
+      const take = applyConstraints({
+        type: 'take',
+        min: 1,
+        max: 50,
+        value: args.input.take ?? 30,
+      });
 
-      return context.prisma.post.findMany({ where });
+      const cursor = args.input.cursor;
+      const posts = await context.prisma.post.findMany({
+        take,
+        ...(cursor && {
+          skip: 1,
+          cursor: { id: cursor },
+        }),
+        orderBy: { id: 'asc' }, // Order by id for consistent pagination
+      });
+
+      // If no results are retrieved, it means we've reached the end of the pagination
+      if(posts.length === 0) {
+        return {
+          edges: [],
+          pageInfo: {
+            endCursor: null,
+            hasNextPage: false,
+          },
+        };
+      }
+
+      const endCursor = posts[posts.length - 1].id;
+      // fetching again to see if there are more pages
+      const nextPage = await context.prisma.post.findMany({
+        take,
+        skip: 1,
+        cursor: {
+          id: endCursor,
+        },
+      });
+
+      const hasNextPage = nextPage.length > 0;
+
+      return {
+        edges: posts,
+        pageInfo: {
+          endCursor,
+          hasNextPage,
+        },
+      };
     },
-    postById(_, args, context) {
+    async postById(_, args, context) {
       const postId = parseIntSafe(args.postId);
 
       if (postId === null) {
@@ -45,11 +81,24 @@ const resolvers: Resolvers = {
         );
       }
 
-      return context.prisma.post.findUnique({
-        where: {
-          id: postId,
-        },
-      });
+      return context.prisma.post
+        .findUniqueOrThrow({
+          where: {
+            id: postId,
+          },
+        })
+        .catch((err: unknown) => {
+          if (
+            err instanceof PrismaClientKnownRequestError &&
+            err.code === 'P2025'
+          ) {
+            return Promise.reject(
+              new GraphQLError(`Cannot find post by id \`${postId}\``),
+            );
+          }
+
+          return Promise.reject(err);
+        });
     },
     authorById(_, args, context) {
       const authorId = parseIntSafe(args.authorId);
@@ -95,6 +144,50 @@ const resolvers: Resolvers = {
           userId: authorId,
         },
       });
+    },
+    async searchPA(_, args, context) {
+      const query = args.query.trim().replace(/\u200E/g, '');
+      if (query.length === 0) return [];
+
+      const posts = await context.prisma.post.findMany({
+        where: {
+          OR: [
+            {
+              title: {
+                mode: 'insensitive',
+                contains: query,
+              },
+            },
+            {
+              content: {
+                mode: 'insensitive',
+                contains: query,
+              },
+            },
+          ],
+        },
+      });
+
+      const users = await context.prisma.user.findMany({
+        where: {
+          OR: [
+            {
+              email: {
+                mode: 'insensitive',
+                contains: query,
+              },
+            },
+            {
+              name: {
+                mode: 'insensitive',
+                contains: query,
+              },
+            },
+          ],
+        },
+      });
+
+      return [...users, ...posts];
     },
     // searchPA(_, args) {
     //   const query = args.query.trim().replace(/\u200E/g, '');
@@ -261,6 +354,17 @@ const resolvers: Resolvers = {
       });
     },
   },
+  SearchResultPA: {
+    __resolveType(thing) {
+      if ((thing as Post).title) {
+        return 'Post';
+      } else if ((thing as User).password) {
+        return 'User';
+      } else {
+        throw new GraphQLError('Unable to determine search type!');
+      }
+    },
+  },
   Comment: {
     post(parent, _, context) {
       return context.prisma.post.findUniqueOrThrow({
@@ -353,14 +457,10 @@ const resolvers: Resolvers = {
 };
 
 const resolversComposition: ResolversComposerMapping<Resolvers> = {
-  'Mutation.createPost': [
-    isAuthenticated(),
-    validAuthorId(),
-    validCategoryId(),
-  ],
-  'Mutation.addComment': [isAuthenticated(), validPostId(), validAuthorId()],
+  'Mutation.createPost': [isAuthenticated(), validCategoryId()],
+  'Mutation.addComment': [isAuthenticated(), validPostId()],
   'Mutation.updateComment': [isAuthenticated(), validCommentId()],
-  'Mutation.upsertProfile': [isAuthenticated(), validAuthorId()],
+  'Mutation.upsertProfile': [isAuthenticated()],
 };
 
 export default composeResolvers(resolvers, resolversComposition);

@@ -1,10 +1,6 @@
 import { ResolversComposition } from '@graphql-tools/resolvers-composition';
 import { GraphQLError, GraphQLFieldResolver } from 'graphql';
 import { ContextValue } from '../../context';
-import {
-  MutationCreatePostArgs,
-  MutationUpdateCommentArgs,
-} from '../__generated__/types';
 import { parseIntSafe } from '../../utils/resolvers/parseIntSafe';
 
 export const validPostId =
@@ -16,21 +12,6 @@ export const validPostId =
     if (postId === null) {
       return Promise.reject(
         new GraphQLError(`Invalid postId. Please provide a valid integer.`),
-      );
-    }
-
-    return next(parent, args, context, info);
-  };
-
-export const validAuthorId =
-  (): ResolversComposition<GraphQLFieldResolver<any, ContextValue, any>> =>
-  next =>
-  (parent, args, context, info) => {
-    const authorId = parseIntSafe(context.me!.id);
-
-    if (authorId === null) {
-      return Promise.reject(
-        new GraphQLError(`Invalid authorId. Please provide a valid integer.`),
       );
     }
 

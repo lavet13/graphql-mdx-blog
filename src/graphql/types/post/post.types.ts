@@ -5,6 +5,11 @@ export default gql`
 
   union SearchResultPA = Post | User
 
+  type PageInfo {
+    endCursor: Int
+    hasNextPage: Boolean!
+  }
+
   input ProfileInput {
     bio: String!
   }
@@ -20,9 +25,19 @@ export default gql`
     password: String!
   }
 
+  input PostsInput {
+    take: Int
+    cursor: Int
+  }
+
+  type PostsResponse {
+    edges: [Post!]!
+    pageInfo: PageInfo!
+  }
+
   type Query {
-    posts(filterNeedle: String): [Post!]!
-    postById(postId: ID!): Post
+    posts(input: PostsInput!): PostsResponse!
+    postById(postId: ID!): Post!
     authorById(authorId: ID!): User
     postComments(postId: ID!): [Comment!]!
     authorComments(authorId: ID!): [Comment]!

@@ -1,9 +1,9 @@
 import { Prisma } from '@prisma/client';
 import { GraphQLError } from 'graphql';
 
-import createToken from '../../../utils/auth/create-token';
-import validatePassword from '../../../utils/auth/validate-password';
-import generatePasswordHash from '../../../utils/auth/generate-password-hash';
+import createToken from '../../utils/auth/create-token';
+import validatePassword from '../../utils/auth/validate-password';
+import generatePasswordHash from '../../utils/auth/generate-password-hash';
 
 const userExtension = Prisma.defineExtension(client => {
   return client.$extends({
