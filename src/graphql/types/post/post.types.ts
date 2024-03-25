@@ -6,8 +6,10 @@ export default gql`
   union SearchResultPA = Post | User
 
   type PageInfo {
+    startCursor: Int
     endCursor: Int
     hasNextPage: Boolean!
+    hasPreviousPage: Boolean!
   }
 
   input ProfileInput {
@@ -27,7 +29,8 @@ export default gql`
 
   input PostsInput {
     take: Int
-    cursor: Int
+    after: Int
+    before: Int
   }
 
   type PostsResponse {

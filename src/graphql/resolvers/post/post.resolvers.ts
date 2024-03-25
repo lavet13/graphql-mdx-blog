@@ -24,51 +24,81 @@ const resolvers: Resolvers = {
 
   Query: {
     async posts(_, args, context) {
-      const take = applyConstraints({
-        type: 'take',
-        min: 1,
-        max: 50,
-        value: args.input.take ?? 30,
-      });
+      enum PaginationDirection {
+        NONE = 'NONE',
+        FORWARD = 'FORWARD',
+        BACKWARD = 'BACKWARD',
+      }
 
-      const cursor = args.input.cursor;
-      const posts = await context.prisma.post.findMany({
-        take,
-        ...(cursor && {
-          skip: 1,
-          cursor: { id: cursor },
+      const direction: PaginationDirection =
+        args.input.after !== undefined
+          ? PaginationDirection.FORWARD
+          : args.input.before !== undefined
+            ? PaginationDirection.BACKWARD
+            : PaginationDirection.NONE;
+      console.log({ direction, before: args.input.before });
+
+      const take = Math.abs(
+        applyConstraints({
+          type: 'take',
+          min: 1,
+          max: 50,
+          value: args.input.take ?? 30,
         }),
+      );
+
+      const posts = await context.prisma.post.findMany({
+        take:
+          direction === PaginationDirection.BACKWARD ? -(take + 1) : take + 1, // Fetch one extra post for determining `hasNextPage`
+        cursor:
+          direction === PaginationDirection.NONE
+            ? undefined
+            : {
+                id:
+                  direction === PaginationDirection.FORWARD
+                    ? args.input.after
+                    : args.input.before,
+              },
+        skip: direction === PaginationDirection.NONE ? undefined : 1, // Skip the cursor post for the next/previous page
         orderBy: { id: 'asc' }, // Order by id for consistent pagination
       });
 
       // If no results are retrieved, it means we've reached the end of the pagination
-      if(posts.length === 0) {
+      if (posts.length === 0) {
         return {
           edges: [],
           pageInfo: {
             endCursor: null,
             hasNextPage: false,
+            hasPreviousPage: false,
           },
         };
       }
 
-      const endCursor = posts[posts.length - 1].id;
-      // fetching again to see if there are more pages
-      const nextPage = await context.prisma.post.findMany({
-        take,
-        skip: 1,
-        cursor: {
-          id: endCursor,
-        },
-      });
+      const edges =
+        posts.length <= take
+          ? posts.slice(0, posts.length)
+          : posts.slice(0, -1);
 
-      const hasNextPage = nextPage.length > 0;
+      const hasMore = posts.length >= take + 1;
+
+      const startCursor = edges.length === 0 ? null : edges[0]?.id;
+      const endCursor = edges.length === 0 ? null : edges.at(-1)?.id;
+
+      console.log({ take: take + 1, postsLength: posts.length, hasMore });
+
+      const hasNextPage = direction === PaginationDirection.BACKWARD || hasMore;
+
+      const hasPreviousPage =
+        direction === PaginationDirection.FORWARD || hasMore;
 
       return {
-        edges: posts,
+        edges,
         pageInfo: {
+          startCursor,
           endCursor,
           hasNextPage,
+          hasPreviousPage,
         },
       };
     },
