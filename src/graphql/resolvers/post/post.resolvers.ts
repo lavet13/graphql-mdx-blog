@@ -30,13 +30,12 @@ const resolvers: Resolvers = {
         BACKWARD = 'BACKWARD',
       }
 
-      const direction: PaginationDirection =
-        args.input.after !== undefined
-          ? PaginationDirection.FORWARD
-          : args.input.before !== undefined
-            ? PaginationDirection.BACKWARD
-            : PaginationDirection.NONE;
-      console.log({ direction, before: args.input.before });
+      const direction: PaginationDirection = args.input.after
+        ? PaginationDirection.FORWARD
+        : args.input.before
+          ? PaginationDirection.BACKWARD
+          : PaginationDirection.NONE;
+      console.log({ before: args.input.before, after: args.input.after });
 
       const take = Math.abs(
         applyConstraints({
@@ -47,19 +46,21 @@ const resolvers: Resolvers = {
         }),
       );
 
+      const cursor =
+        direction === PaginationDirection.NONE
+          ? undefined
+          : {
+              id:
+                direction === PaginationDirection.FORWARD
+                  ? args.input.after ?? undefined
+                  : args.input.before ?? undefined,
+            };
+
       const posts = await context.prisma.post.findMany({
         take:
           direction === PaginationDirection.BACKWARD ? -(take + 1) : take + 1, // Fetch one extra post for determining `hasNextPage`
-        cursor:
-          direction === PaginationDirection.NONE
-            ? undefined
-            : {
-                id:
-                  direction === PaginationDirection.FORWARD
-                    ? args.input.after
-                    : args.input.before,
-              },
-        skip: direction === PaginationDirection.NONE ? undefined : 1, // Skip the cursor post for the next/previous page
+        cursor,
+        skip: cursor ? 1 : undefined, // Skip the cursor post for the next/previous page
         orderBy: { id: 'asc' }, // Order by id for consistent pagination
       });
 
@@ -78,19 +79,23 @@ const resolvers: Resolvers = {
       const edges =
         posts.length <= take
           ? posts.slice(0, posts.length)
-          : posts.slice(0, -1);
+          : direction === PaginationDirection.BACKWARD
+            ? posts.slice(1, posts.length)
+            : posts.slice(0, -1);
 
-      const hasMore = posts.length >= take + 1;
+      const hasMore = posts.length > take;
 
       const startCursor = edges.length === 0 ? null : edges[0]?.id;
       const endCursor = edges.length === 0 ? null : edges.at(-1)?.id;
 
-      console.log({ take: take + 1, postsLength: posts.length, hasMore });
-
-      const hasNextPage = direction === PaginationDirection.BACKWARD || hasMore;
+      const hasNextPage =
+        direction === PaginationDirection.BACKWARD ||
+        (direction === PaginationDirection.FORWARD && hasMore) ||
+        (direction === PaginationDirection.NONE && edges.length < posts.length);
 
       const hasPreviousPage =
-        direction === PaginationDirection.FORWARD || hasMore;
+        direction === PaginationDirection.FORWARD ||
+        (direction === PaginationDirection.BACKWARD && hasMore);
 
       return {
         edges,
