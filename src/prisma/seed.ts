@@ -7,7 +7,7 @@ export default async function seed() {
   const password = 'negr';
 
   console.log({ countDown, isCreated: countDown > 0 });
-  if(countDown > 0) {
+  if (countDown > 0) {
     return;
   }
 
@@ -115,6 +115,51 @@ export default async function seed() {
             comments: {
               create: {
                 text: 'I cannot MegaLYL',
+                userId: firstUser.id,
+              },
+            },
+          },
+          {
+            title: 'fourth post ever made!',
+            content: 'some fourth ass content',
+            author: {
+              connect: {
+                id: thirdUser.id,
+              },
+            },
+            comments: {
+              create: {
+                text: 'I can MegaLYL',
+                userId: firstUser.id,
+              },
+            },
+          },
+          {
+            title: 'fifth post ever made!',
+            content: 'some fifth ass content',
+            author: {
+              connect: {
+                id: thirdUser.id,
+              },
+            },
+            comments: {
+              create: {
+                text: 'I cannnnnooot UWU',
+                userId: secondUser.id,
+              },
+            },
+          },
+          {
+            title: 'sixth post ever made!',
+            content: 'some sixth ass content',
+            author: {
+              connect: {
+                id: thirdUser.id,
+              },
+            },
+            comments: {
+              create: {
+                text: 'I can MegaLYL',
                 userId: firstUser.id,
               },
             },

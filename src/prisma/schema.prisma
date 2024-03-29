@@ -43,7 +43,7 @@ model User {
 model Profile {
   id     Int    @id @default(autoincrement())
   bio    String
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId Int    @unique
 }
 
@@ -59,6 +59,6 @@ model Comment {
   updatedAt DateTime @updatedAt
   userId    Int
   postId    Int
-  user      User     @relation(fields: [userId], references: [id])
-  post      Post     @relation(fields: [postId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
 }
