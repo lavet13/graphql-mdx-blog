@@ -164,6 +164,51 @@ export default async function seed() {
               },
             },
           },
+          {
+            title: 'seventh post ever made!',
+            content: 'some seventh ass content',
+            author: {
+              connect: {
+                id: thirdUser.id,
+              },
+            },
+            comments: {
+              create: {
+                text: 'I can MegaLYL',
+                userId: firstUser.id,
+              },
+            },
+          },
+          {
+            title: 'eightth post ever made!',
+            content: 'some eightth ass content',
+            author: {
+              connect: {
+                id: secondUser.id,
+              },
+            },
+            comments: {
+              create: {
+                text: 'I can MegaLYL',
+                userId: firstUser.id,
+              },
+            },
+          },
+          {
+            title: 'nineth post ever made!',
+            content: 'some nineth ass content',
+            author: {
+              connect: {
+                id: firstUser.id,
+              },
+            },
+            comments: {
+              create: {
+                text: 'I can MegaLYL',
+                userId: firstUser.id,
+              },
+            },
+          },
         ],
       },
     },

@@ -46,7 +46,7 @@ const resolvers: Resolvers = {
         }),
       );
 
-      const cursor =
+      let cursor =
         direction === PaginationDirection.NONE
           ? undefined
           : {
@@ -55,6 +55,28 @@ const resolvers: Resolvers = {
                   ? args.input.after ?? undefined
                   : args.input.before ?? undefined,
             };
+
+      if (direction !== PaginationDirection.NONE) {
+        // in case where we might get cursor which points to nothing
+        const cursorPost = await context.prisma.post.findUnique({
+          where: { id: cursor?.id },
+        });
+
+        if (!cursorPost) {
+          if (direction === PaginationDirection.FORWARD) {
+            cursor = undefined;
+          } else if (direction === PaginationDirection.BACKWARD) {
+            const lastValidPost = await context.prisma.post.findFirst({
+              where: { id: { lt: args.input.before } },
+              orderBy: {
+                id: 'desc',
+              },
+            });
+
+            cursor = lastValidPost ? { id: lastValidPost?.id } : undefined;
+          }
+        }
+      }
 
       const posts = await context.prisma.post.findMany({
         take:
