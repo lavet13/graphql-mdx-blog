@@ -56,28 +56,42 @@ const resolvers: Resolvers = {
                   : args.input.before ?? undefined,
             };
 
+      // in case where we might get cursor which points to nothing
       if (direction !== PaginationDirection.NONE) {
-        // in case where we might get cursor which points to nothing
+        // checking if the cursor pointing to the post doesn't exist,
+        // otherwise skip
         const cursorPost = await context.prisma.post.findUnique({
           where: { id: cursor?.id },
         });
 
         if (!cursorPost) {
           if (direction === PaginationDirection.FORWARD) {
-            cursor = undefined;
+            // this shit is shit and isn't work for me,
+            // or because perhaps I am retard ☺️💕
+            //
+            // const previousValidPost = await context.prisma.post.findFirst({
+            //   where: { id: { lt: args.input.after } },
+            //   orderBy: { id: 'desc' },
+            // });
+            // console.log({ previousValidPost });
+            // cursor = previousValidPost ? { id: previousValidPost.id } : undefined;
+
+            cursor = { id: -1 }; // we guarantee posts are empty
           } else if (direction === PaginationDirection.BACKWARD) {
-            const lastValidPost = await context.prisma.post.findFirst({
-              where: { id: { lt: args.input.before } },
+            const nextValidPost = await context.prisma.post.findFirst({
+              where: { id: { gt: args.input.before } },
               orderBy: {
-                id: 'desc',
+                id: 'asc',
               },
             });
+            console.log({ nextValidPost });
 
-            cursor = lastValidPost ? { id: lastValidPost?.id } : undefined;
+            cursor = nextValidPost ? { id: nextValidPost.id } : undefined;
           }
         }
       }
 
+      // fetching posts with extra one, so to determine if there's more to fetch
       const posts = await context.prisma.post.findMany({
         take:
           direction === PaginationDirection.BACKWARD ? -(take + 1) : take + 1, // Fetch one extra post for determining `hasNextPage`
@@ -86,7 +100,12 @@ const resolvers: Resolvers = {
         orderBy: { id: 'asc' }, // Order by id for consistent pagination
       });
 
-      // If no results are retrieved, it means we've reached the end of the pagination
+      // If no results are retrieved, it means we've reached the end of the
+      // pagination or because we stumble upon invalid cursor, so on the
+      // client we just clearing `before` and `after` cursors to get first posts
+      // forward pagination could have no posts at all,
+      // or because cursor is set to `{ id: -1 }`, for backward pagination
+      // the only thing would happen if only posts are empty!
       if (posts.length === 0) {
         return {
           edges: [],
@@ -98,9 +117,14 @@ const resolvers: Resolvers = {
         };
       }
 
+      // If the number of posts fetched is less than or equal to the
+      // `take` value, you include all the posts in the `edges` array.
+      // However, if the number of posts fetched is greater than
+      // the `take` value, you exclude the extra post from
+      // the `edges` array by slicing the posts array.
       const edges =
         posts.length <= take
-          ? posts.slice(0, posts.length)
+          ? posts
           : direction === PaginationDirection.BACKWARD
             ? posts.slice(1, posts.length)
             : posts.slice(0, -1);
@@ -110,10 +134,24 @@ const resolvers: Resolvers = {
       const startCursor = edges.length === 0 ? null : edges[0]?.id;
       const endCursor = edges.length === 0 ? null : edges.at(-1)?.id;
 
+      // This is where the condition `edges.length < posts.length` comes into
+      // play. If the length of the `edges` array is less than the length
+      // of the `posts` array, it means that the extra post was fetched and
+      // excluded from the `edges` array. That implies that there are more
+      // posts available to fetch in the current pagination direction.
       const hasNextPage =
         direction === PaginationDirection.BACKWARD ||
         (direction === PaginationDirection.FORWARD && hasMore) ||
         (direction === PaginationDirection.NONE && edges.length < posts.length);
+      // /\
+      // |
+      // |
+      // NOTE: This condition `edges.length < posts.length` is essentially
+      // checking the same thing as `hasMore`, which is whether there are more
+      // posts available to fetch. Therefore, you can safely replace
+      // `edges.length < posts.length` with hasMore in the condition for
+      // determining hasNextPage. Both conditions are equivalent and will
+      // produce the same result.
 
       const hasPreviousPage =
         direction === PaginationDirection.FORWARD ||
