@@ -91,6 +91,12 @@ const resolvers: Resolvers = {
         }
       }
 
+      const query = args.input.query?.trim(); // user input
+      const searching = !!query && query.length !== 0;
+      console.log({ searching, query });
+
+      cursor = !searching ? cursor : undefined;
+
       // fetching posts with extra one, so to determine if there's more to fetch
       const posts = await context.prisma.post.findMany({
         take:
@@ -98,6 +104,11 @@ const resolvers: Resolvers = {
         cursor,
         skip: cursor ? 1 : undefined, // Skip the cursor post for the next/previous page
         orderBy: { id: 'asc' }, // Order by id for consistent pagination
+        where: {
+          OR: query
+            ? [{ title: { contains: query } }, { content: { contains: query } }]
+            : undefined,
+        },
       });
 
       // If no results are retrieved, it means we've reached the end of the

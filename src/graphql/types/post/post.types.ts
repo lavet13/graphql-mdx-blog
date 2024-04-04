@@ -31,6 +31,7 @@ export default gql`
     take: Int
     after: Int
     before: Int
+    query: String
   }
 
   type PostsResponse {
