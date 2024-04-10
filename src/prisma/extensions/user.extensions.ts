@@ -30,7 +30,7 @@ const userExtension = Prisma.defineExtension(client => {
           const isValid = await validatePassword(password, user.password);
 
           if (!isValid) {
-            throw new GraphQLError('Invalid password!');
+            throw new GraphQLError('Введен неверный пароль!');
           }
 
           const token = createToken(user, { expiresIn: '24h' });

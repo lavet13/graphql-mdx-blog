@@ -2,6 +2,8 @@ import 'dotenv/config';
 import express from 'express';
 
 import { makeExecutableSchema } from '@graphql-tools/schema';
+import { useCookies } from '@whatwg-node/server-plugin-cookies';
+import { useJWT } from '@graphql-yoga/plugin-jwt';
 
 import resolvers from './graphql/resolvers';
 import typeDefs from './graphql/types';
@@ -33,8 +35,14 @@ async function bootstrap() {
       //   // global cache
       //   session: () => null,
       // }),
+      useCookies(),
     ],
   });
+
+  // create endpoints before yoga's endpoint
+  // app.get('/test', (req, res) => {
+  //   res.send({ success: false });
+  // });
 
   app.use(import.meta.env.VITE_GRAPHQL_ENDPOINT, yoga);
 

@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { User } from '@prisma/client';
-import { SignOptions } from 'jsonwebtoken';
+import { type SignOptions } from 'jsonwebtoken';
 
 const createToken = (
   user: User,
@@ -8,7 +8,9 @@ const createToken = (
 ) => {
   const { id } = user;
 
-  return jwt.sign({ id }, import.meta.env.VITE_SECRET, options);
+  const signingKey = import.meta.env.VITE_SECRET;
+
+  return jwt.sign({ id }, signingKey, options);
 };
 
 export default createToken;

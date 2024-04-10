@@ -2,22 +2,58 @@ import jwt from 'jsonwebtoken';
 
 import { GraphQLError } from 'graphql';
 
-export default function authenticateUser(
+export default async function authenticateUser(
   request: Request,
-): jwt.JwtPayload | null {
-  const header = request.headers.get('authorization');
+): Promise<jwt.JwtPayload | null> {
+  const token = await getToken(request);
+  console.log({ authenticationToken: token });
 
-  if (!header) return null;
+  if (!token) return null;
 
-  const [, token] = header.split(' ');
+  const verified = (await verify(
+    token,
+    import.meta.env.VITE_SECRET,
+  )) as jwt.JwtPayload;
 
-  if (!token) {
-    throw new GraphQLError('Forget to put Bearer at the beginning!');
+  if (!verified) {
+    throw new GraphQLError(`Unauthenticated`);
   }
 
-  try {
-    return jwt.verify(token, import.meta.env.VITE_SECRET) as jwt.JwtPayload;
-  } catch (err) {
-    throw new GraphQLError('Session timeout. Please authenticate again.');
+  return verified as jwt.JwtPayload;
+}
+
+async function getToken(request: Request) {
+  const authorization = await request.cookieStore?.get('authorization');
+
+  if (!authorization) {
+    return null;
   }
+
+  return authorization.value;
+}
+// function defaultGetToken (request: Request) {
+//   const header = request.headers.get('authorization');
+//   if (!header) {
+//     return null;
+//   }
+//   const [type, token] = header.split(' ');
+//   if (type !== 'Bearer') {
+//     throw new GraphQLError(`Unsupported token type provided: "${type}"`);
+//   }
+//   return token;
+// };
+function verify(token: string, signingKey: string) {
+  return new Promise((resolve, reject) => {
+    jwt.verify(token, signingKey, {}, (err, result) => {
+      if (err) {
+        reject(
+          new GraphQLError(
+            'Failed to decode authentication token. Verification failed.',
+          ),
+        );
+      } else {
+        resolve(result);
+      }
+    });
+  });
 }

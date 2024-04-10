@@ -1,5 +1,5 @@
 import { GraphQLError } from 'graphql';
-import { Post, Prisma, User } from '@prisma/client';
+import { Post, User } from '@prisma/client';
 
 import { ContentLimit, Resolvers } from '../../__generated__/types';
 
@@ -23,7 +23,14 @@ const resolvers: Resolvers = {
   Date: DateScalar,
 
   Query: {
-    async posts(_, args, context) {
+    me(_, __, ctx) {
+      return ctx.prisma.user.findFirst({
+        where: {
+          id: ctx.me!.id,
+        },
+      });
+    },
+    async posts(_, args, ctx) {
       enum PaginationDirection {
         NONE = 'NONE',
         FORWARD = 'FORWARD',
@@ -60,7 +67,7 @@ const resolvers: Resolvers = {
       if (direction !== PaginationDirection.NONE) {
         // checking if the cursor pointing to the post doesn't exist,
         // otherwise skip
-        const cursorPost = await context.prisma.post.findUnique({
+        const cursorPost = await ctx.prisma.post.findUnique({
           where: { id: cursor?.id },
         });
 
@@ -69,7 +76,7 @@ const resolvers: Resolvers = {
             // this shit is shit and isn't work for me,
             // or because perhaps I am retard ☺️💕
             //
-            // const previousValidPost = await context.prisma.post.findFirst({
+            // const previousValidPost = await ctx.prisma.post.findFirst({
             //   where: { id: { lt: args.input.after } },
             //   orderBy: { id: 'desc' },
             // });
@@ -78,7 +85,7 @@ const resolvers: Resolvers = {
 
             cursor = { id: -1 }; // we guarantee posts are empty
           } else if (direction === PaginationDirection.BACKWARD) {
-            const nextValidPost = await context.prisma.post.findFirst({
+            const nextValidPost = await ctx.prisma.post.findFirst({
               where: { id: { gt: args.input.before } },
               orderBy: {
                 id: 'asc',
@@ -98,7 +105,7 @@ const resolvers: Resolvers = {
       cursor = !searching ? cursor : undefined;
 
       // fetching posts with extra one, so to determine if there's more to fetch
-      const posts = await context.prisma.post.findMany({
+      const posts = await ctx.prisma.post.findMany({
         take:
           direction === PaginationDirection.BACKWARD ? -(take + 1) : take + 1, // Fetch one extra post for determining `hasNextPage`
         cursor,
@@ -178,7 +185,7 @@ const resolvers: Resolvers = {
         },
       };
     },
-    async postById(_, args, context) {
+    async postById(_, args, ctx) {
       const postId = parseIntSafe(args.postId);
 
       if (postId === null) {
@@ -187,7 +194,7 @@ const resolvers: Resolvers = {
         );
       }
 
-      return context.prisma.post
+      return ctx.prisma.post
         .findUniqueOrThrow({
           where: {
             id: postId,
@@ -206,7 +213,7 @@ const resolvers: Resolvers = {
           return Promise.reject(err);
         });
     },
-    authorById(_, args, context) {
+    authorById(_, args, ctx) {
       const authorId = parseIntSafe(args.authorId);
 
       if (authorId === null) {
@@ -215,13 +222,13 @@ const resolvers: Resolvers = {
         );
       }
 
-      return context.prisma.user.findUnique({
+      return ctx.prisma.user.findUnique({
         where: {
           id: authorId,
         },
       });
     },
-    postComments(_, args, context) {
+    postComments(_, args, ctx) {
       const postId = parseIntSafe(args.postId);
 
       if (postId === null) {
@@ -230,13 +237,13 @@ const resolvers: Resolvers = {
         );
       }
 
-      return context.prisma.comment.findMany({
+      return ctx.prisma.comment.findMany({
         where: {
           postId,
         },
       });
     },
-    authorComments(_, args, context) {
+    authorComments(_, args, ctx) {
       const authorId = parseIntSafe(args.authorId);
 
       if (authorId === null) {
@@ -245,17 +252,17 @@ const resolvers: Resolvers = {
         );
       }
 
-      return context.prisma.comment.findMany({
+      return ctx.prisma.comment.findMany({
         where: {
           userId: authorId,
         },
       });
     },
-    async searchPA(_, args, context) {
+    async searchPA(_, args, ctx) {
       const query = args.query.trim().replace(/\u200E/g, '');
       if (query.length === 0) return [];
 
-      const posts = await context.prisma.post.findMany({
+      const posts = await ctx.prisma.post.findMany({
         where: {
           OR: [
             {
@@ -274,7 +281,7 @@ const resolvers: Resolvers = {
         },
       });
 
-      const users = await context.prisma.user.findMany({
+      const users = await ctx.prisma.user.findMany({
         where: {
           OR: [
             {
@@ -326,22 +333,63 @@ const resolvers: Resolvers = {
     // },
   },
   Mutation: {
-    async login(_, args, context) {
+    async login(_, args, ctx) {
       const { login, password } = args.loginInput;
 
-      return context.prisma.user.login(login, password);
+      const { token } = await ctx.prisma.user.login(login, password);
+      console.log({ loginToken: token });
+
+      try {
+        await ctx.request.cookieStore?.set({
+          name: 'authorization',
+          value: token,
+          sameSite: 'none',
+          secure: true,
+          httpOnly: true,
+          domain: null,
+          expires: null,
+        });
+      } catch(reason) {
+        console.error(`It failed: ${reason}`);
+        throw new GraphQLError(`failed while setting the cookie`);
+      }
+
+      // console.log({ authorization: await ctx.request.cookieStore?.get('authorization') });
+      // console.log({ cookies: await ctx.request.cookieStore?.getAll()});
+
+      return { token };
     },
-    async signup(_, args, context) {
+    async signup(_, args, ctx) {
       const { email, name, password } = args.signupInput;
 
-      return context.prisma.user.signup(email, name, password);
+      const { token } = await ctx.prisma.user.signup(email, name, password);
+
+      try {
+        await ctx.request.cookieStore?.set({
+          name: 'authorization',
+          value: token,
+          sameSite: 'none',
+          secure: true,
+          httpOnly: true,
+          domain: null,
+          expires: null,
+        });
+      } catch(reason) {
+        console.error(`It failed: ${reason}`);
+        throw new GraphQLError(`failed while setting the cookie`);
+      }
+
+      // console.log({ authorization: await ctx.request.cookieStore?.get('authorization') });
+      // console.log({ cookies: await ctx.request.cookieStore?.getAll()});
+
+      return { token };
     },
-    async createPost(_, args, context) {
+    async createPost(_, args, ctx) {
       const { title, content } = args;
-      const authorId = context.me!.id;
+      const authorId = ctx.me!.id;
       const categoryId = parseInt(args.categoryId);
 
-      const newPost = await context.prisma.post
+      const newPost = await ctx.prisma.post
         .create({
           data: {
             categories: {
@@ -373,18 +421,18 @@ const resolvers: Resolvers = {
 
       return newPost;
     },
-    async addCategory(_, args, context) {
+    async addCategory(_, args, ctx) {
       const name = args.name;
 
-      return context.prisma.category.create({
+      return ctx.prisma.category.create({
         data: {
           name,
         },
       });
     },
-    async addComment(_, args, context) {
+    async addComment(_, args, ctx) {
       const postId = parseInt(args.postId, 10);
-      const authorId = context.me!.id;
+      const authorId = ctx.me!.id;
       const text = args.text;
 
       if (text.trim().length === 0 || text.trim().length <= 2) {
@@ -395,7 +443,7 @@ const resolvers: Resolvers = {
         );
       }
 
-      const newComment = await context.prisma.comment
+      const newComment = await ctx.prisma.comment
         .create({
           data: {
             postId,
@@ -418,11 +466,11 @@ const resolvers: Resolvers = {
 
       return newComment;
     },
-    async updateComment(_, args, context) {
+    async updateComment(_, args, ctx) {
       const id = parseInt(args.id, 10);
       const text = args.text;
 
-      return context.prisma.comment
+      return ctx.prisma.comment
         .update({
           where: {
             id,
@@ -443,19 +491,19 @@ const resolvers: Resolvers = {
           return Promise.reject(err);
         });
     },
-    async upsertProfile(_, args, context) {
+    async upsertProfile(_, args, ctx) {
       const { bio } = args.profileInput;
 
-      return context.prisma.profile.upsert({
+      return ctx.prisma.profile.upsert({
         where: {
-          userId: context.me!.id,
+          userId: ctx.me!.id,
         },
         update: {
           bio,
         },
         create: {
           bio,
-          userId: context.me!.id,
+          userId: ctx.me!.id,
         },
       });
     },
@@ -472,15 +520,15 @@ const resolvers: Resolvers = {
     },
   },
   Comment: {
-    post(parent, _, context) {
-      return context.prisma.post.findUniqueOrThrow({
+    post(parent, _, ctx) {
+      return ctx.prisma.post.findUniqueOrThrow({
         where: {
           id: parent.postId,
         },
       });
     },
-    author(parent, _, context) {
-      return context.prisma.user.findUniqueOrThrow({
+    author(parent, _, ctx) {
+      return ctx.prisma.user.findUniqueOrThrow({
         where: {
           id: parent.userId,
         },
@@ -488,8 +536,8 @@ const resolvers: Resolvers = {
     },
   },
   Profile: {
-    user(parent, _, context) {
-      return context.prisma.user.findUniqueOrThrow({
+    user(parent, _, ctx) {
+      return ctx.prisma.user.findUniqueOrThrow({
         where: {
           id: parent.userId,
         },
@@ -497,22 +545,22 @@ const resolvers: Resolvers = {
     },
   },
   User: {
-    posts(parent, _, context) {
-      return context.prisma.post.findMany({
+    posts(parent, _, ctx) {
+      return ctx.prisma.post.findMany({
         where: {
           authorId: parent.id,
         },
       });
     },
-    comments(parent, _, context) {
-      return context.prisma.comment.findMany({
+    comments(parent, _, ctx) {
+      return ctx.prisma.comment.findMany({
         where: {
           userId: parent.id,
         },
       });
     },
-    profile(parent, _, context) {
-      return context.prisma.profile.findUnique({
+    profile(parent, _, ctx) {
+      return ctx.prisma.profile.findUnique({
         where: {
           userId: parent.id,
         },
@@ -532,15 +580,15 @@ const resolvers: Resolvers = {
           return parent.content.slice();
       }
     },
-    author(parent, _, context) {
-      return context.prisma.user.findUniqueOrThrow({
+    author(parent, _, ctx) {
+      return ctx.prisma.user.findUniqueOrThrow({
         where: {
           id: parent.authorId,
         },
       });
     },
-    comments(parent, _, context) {
-      return context.prisma.comment.findMany({
+    comments(parent, _, ctx) {
+      return ctx.prisma.comment.findMany({
         where: {
           post: {
             id: parent.id,
@@ -548,8 +596,8 @@ const resolvers: Resolvers = {
         },
       });
     },
-    categories(parent, _, context) {
-      return context.prisma.category.findMany({
+    categories(parent, _, ctx) {
+      return ctx.prisma.category.findMany({
         where: {
           posts: {
             some: {
@@ -563,6 +611,7 @@ const resolvers: Resolvers = {
 };
 
 const resolversComposition: ResolversComposerMapping<Resolvers> = {
+  'Query.me': [isAuthenticated()],
   'Mutation.createPost': [isAuthenticated(), validCategoryId()],
   'Mutation.addComment': [isAuthenticated(), validPostId()],
   'Mutation.updateComment': [isAuthenticated(), validCommentId()],

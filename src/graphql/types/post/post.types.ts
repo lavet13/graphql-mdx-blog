@@ -40,6 +40,7 @@ export default gql`
   }
 
   type Query {
+    me: User
     posts(input: PostsInput!): PostsResponse!
     postById(postId: ID!): Post!
     authorById(authorId: ID!): User
