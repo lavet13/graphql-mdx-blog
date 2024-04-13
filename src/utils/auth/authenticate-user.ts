@@ -6,7 +6,6 @@ export default async function authenticateUser(
   request: Request,
 ): Promise<jwt.JwtPayload | null> {
   const token = await getToken(request);
-  console.log({ authenticationToken: token });
 
   if (!token) return null;
 
@@ -19,11 +18,12 @@ export default async function authenticateUser(
     throw new GraphQLError(`Unauthenticated`);
   }
 
-  return verified as jwt.JwtPayload;
+  return verified;
 }
 
 async function getToken(request: Request) {
-  const authorization = await request.cookieStore?.get('authorization');
+  const authorization = await request.cookieStore?.get('authorization') ?? '';
+  console.log({ authorization });
 
   if (!authorization) {
     return null;

@@ -343,11 +343,12 @@ const resolvers: Resolvers = {
         await ctx.request.cookieStore?.set({
           name: 'authorization',
           value: token,
-          sameSite: 'none',
+          sameSite: 'lax',
           secure: true,
           httpOnly: true,
           domain: null,
           expires: null,
+          path: '/',
         });
       } catch(reason) {
         console.error(`It failed: ${reason}`);
@@ -368,11 +369,12 @@ const resolvers: Resolvers = {
         await ctx.request.cookieStore?.set({
           name: 'authorization',
           value: token,
-          sameSite: 'none',
+          sameSite: 'lax',
           secure: true,
           httpOnly: true,
           domain: null,
           expires: null,
+          path: '/',
         });
       } catch(reason) {
         console.error(`It failed: ${reason}`);

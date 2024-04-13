@@ -30,6 +30,9 @@ async function bootstrap() {
     graphqlEndpoint: import.meta.env.VITE_GRAPHQL_ENDPOINT,
     graphiql: import.meta.env.DEV,
     landingPage: import.meta.env.PROD,
+    cors: {
+      credentials: true,
+    },
     plugins: [
       // useResponseCache({
       //   // global cache
