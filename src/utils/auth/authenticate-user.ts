@@ -6,6 +6,7 @@ export default async function authenticateUser(
   request: Request,
 ): Promise<jwt.JwtPayload | null> {
   const token = await getToken(request);
+  console.log({ token });
 
   if (!token) return null;
 
@@ -13,6 +14,7 @@ export default async function authenticateUser(
     token,
     import.meta.env.VITE_SECRET,
   )) as jwt.JwtPayload;
+  console.log({ verified });
 
   if (!verified) {
     throw new GraphQLError(`Unauthenticated`);
@@ -22,7 +24,9 @@ export default async function authenticateUser(
 }
 
 async function getToken(request: Request) {
-  const authorization = await request.cookieStore?.get('authorization') ?? '';
+  const authorization = await request.cookieStore?.get({
+    name: 'authorization',
+  });
   console.log({ authorization });
 
   if (!authorization) {

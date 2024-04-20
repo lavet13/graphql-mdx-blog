@@ -57,6 +57,7 @@ export default gql`
     addCategory(name: String!): Category!
     login(loginInput: LoginInput!): AuthPayload!
     signup(signupInput: SignupInput!): AuthPayload!
+    logout: Boolean!
   }
 
   enum ContentLimit {

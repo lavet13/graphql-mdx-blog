@@ -343,7 +343,7 @@ const resolvers: Resolvers = {
         await ctx.request.cookieStore?.set({
           name: 'authorization',
           value: token,
-          sameSite: 'lax',
+          sameSite: 'none',
           secure: true,
           httpOnly: true,
           domain: null,
@@ -369,7 +369,7 @@ const resolvers: Resolvers = {
         await ctx.request.cookieStore?.set({
           name: 'authorization',
           value: token,
-          sameSite: 'lax',
+          sameSite: 'none',
           secure: true,
           httpOnly: true,
           domain: null,
@@ -385,6 +385,18 @@ const resolvers: Resolvers = {
       // console.log({ cookies: await ctx.request.cookieStore?.getAll()});
 
       return { token };
+    },
+    async logout(_, __, ctx) {
+      try {
+        await ctx.request.cookieStore?.delete('authorization');
+
+        return true;
+      } catch(err: any) {
+        if(err instanceof Error) {
+          console.error('Error while loggin out: ' + err.message);
+        }
+        throw new GraphQLError('Error occured while logging out! (┬┬﹏┬┬)');
+      }
     },
     async createPost(_, args, ctx) {
       const { title, content } = args;
