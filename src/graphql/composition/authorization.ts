@@ -7,7 +7,7 @@ export const isAuthenticated = (): ResolversComposition<
   GraphQLFieldResolver<any, ContextValue, any>
 > => next => (parent, args, context, info) => {
   if(!context.me) {
-    throw new GraphQLError('You are not authenticated!');
+    return null;
   }
 
   const authorId = parseIntSafe(context.me!.id);

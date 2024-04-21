@@ -392,9 +392,7 @@ const resolvers: Resolvers = {
 
         return true;
       } catch(err: any) {
-        if(err instanceof Error) {
-          console.error('Error while loggin out: ' + err.message);
-        }
+        console.error({ err });
         throw new GraphQLError('Error occured while logging out! (┬┬﹏┬┬)');
       }
     },
