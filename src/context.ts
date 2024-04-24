@@ -1,6 +1,6 @@
 import { YogaInitialContext } from 'graphql-yoga';
-import jwt from 'jsonwebtoken';
 import prisma from './prisma/prisma';
+import jwt from 'jsonwebtoken';
 
 import authenticateUser from './utils/auth/authenticate-user';
 

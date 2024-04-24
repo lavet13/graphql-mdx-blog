@@ -24,6 +24,7 @@ const resolvers: Resolvers = {
 
   Query: {
     me(_, __, ctx) {
+      console.log({ me: ctx.me });
       return ctx.prisma.user.findFirst({
         where: {
           id: ctx.me!.id,
@@ -201,6 +202,7 @@ const resolvers: Resolvers = {
           },
         })
         .catch((err: unknown) => {
+          console.log('cannot find post');
           if (
             err instanceof PrismaClientKnownRequestError &&
             err.code === 'P2025'

@@ -4,23 +4,13 @@ import { GraphQLError } from 'graphql';
 
 export default async function authenticateUser(
   request: Request,
-): Promise<jwt.JwtPayload | null> {
+): Promise<string | null> {
   const token = await getToken(request);
   console.log({ token });
 
   if (!token) return null;
 
-  const verified = (await verify(
-    token,
-    import.meta.env.VITE_SECRET,
-  )) as jwt.JwtPayload;
-  console.log({ verified });
-
-  if (!verified) {
-    throw new GraphQLError(`Unauthenticated`);
-  }
-
-  return verified;
+  return token;
 }
 
 async function getToken(request: Request) {
@@ -46,7 +36,7 @@ async function getToken(request: Request) {
 //   }
 //   return token;
 // };
-function verify(token: string, signingKey: string) {
+export function verify(token: string, signingKey: string) {
   return new Promise((resolve, reject) => {
     jwt.verify(token, signingKey, {}, (err, result) => {
       if (err) {

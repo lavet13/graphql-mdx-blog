@@ -2,21 +2,39 @@ import { ResolversComposition } from '@graphql-tools/resolvers-composition';
 import { GraphQLError, GraphQLFieldResolver } from 'graphql';
 import { ContextValue } from '../../context';
 import { parseIntSafe } from '../../utils/resolvers/parseIntSafe';
+import { verify } from '../../utils/auth/authenticate-user';
+import jwt from 'jsonwebtoken';
 
-export const isAuthenticated = (): ResolversComposition<
-  GraphQLFieldResolver<any, ContextValue, any>
-> => next => (parent, args, context, info) => {
-  if(!context.me) {
-    return null;
-  }
-
-  const authorId = parseIntSafe(context.me!.id);
-
-  if (authorId === null) {
-    return Promise.reject(
-      new GraphQLError(`Invalid authorId. Please provide a valid integer.`),
-    );
-  }
-
-  return next(parent, args, context, info);
+type MapContextMe<T> = {
+  [K in keyof T]: K extends 'me' ? string : T[K];
 };
+
+export const isAuthenticated =
+  (): ResolversComposition<
+    GraphQLFieldResolver<any, MapContextMe<ContextValue>, any>
+  > =>
+  next =>
+  async (parent, args, context, info) => {
+    let verified = null;
+    const token = context.me;
+
+    if (token === null) return null;
+
+    try {
+      verified = (await verify(
+        token as string,
+        import.meta.env.VITE_SECRET,
+      )) as jwt.JwtPayload;
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        await context.request.cookieStore?.delete('authorization');
+
+        throw new GraphQLError(error.message);
+      }
+    }
+
+    // @ts-ignore
+    context.me = verified;
+
+    return next(parent, args, context, info);
+  };
