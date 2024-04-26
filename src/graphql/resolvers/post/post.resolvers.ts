@@ -341,6 +341,10 @@ const resolvers: Resolvers = {
       const { token } = await ctx.prisma.user.login(login, password);
       console.log({ loginToken: token });
 
+      // 14 days
+      const expires =
+        Date.now() + Date.parse(new Date(1000 * 60 * 60 * 24 * 14).toString());
+
       try {
         await ctx.request.cookieStore?.set({
           name: 'authorization',
@@ -349,12 +353,12 @@ const resolvers: Resolvers = {
           secure: true,
           httpOnly: true,
           domain: null,
-          expires: null,
+          expires,
           path: '/',
         });
-      } catch(reason) {
+      } catch (reason) {
         console.error(`It failed: ${reason}`);
-        throw new GraphQLError(`failed while setting the cookie`);
+        throw new GraphQLError(`Failed while setting the cookie`);
       }
 
       // console.log({ authorization: await ctx.request.cookieStore?.get('authorization') });
@@ -378,9 +382,9 @@ const resolvers: Resolvers = {
           expires: null,
           path: '/',
         });
-      } catch(reason) {
+      } catch (reason) {
         console.error(`It failed: ${reason}`);
-        throw new GraphQLError(`failed while setting the cookie`);
+        throw new GraphQLError(`Failed while setting the cookie`);
       }
 
       // console.log({ authorization: await ctx.request.cookieStore?.get('authorization') });
@@ -393,7 +397,7 @@ const resolvers: Resolvers = {
         await ctx.request.cookieStore?.delete('authorization');
 
         return true;
-      } catch(err: any) {
+      } catch (err: any) {
         console.error({ err });
         throw new GraphQLError('Error occured while logging out! (┬┬﹏┬┬)');
       }
@@ -554,6 +558,19 @@ const resolvers: Resolvers = {
       return ctx.prisma.user.findUniqueOrThrow({
         where: {
           id: parent.userId,
+        },
+      });
+    },
+  },
+  Category: {
+    posts(parent, _, ctx) {
+      return ctx.prisma.post.findMany({
+        where: {
+          categories: {
+            some: {
+              id: parent.id,
+            },
+          },
         },
       });
     },
