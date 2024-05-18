@@ -1,0 +1,30 @@
+version: '3.9'
+services:
+  easy-bank-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: easy-bank-api
+    restart: always
+    ports:
+      - 4000:4000
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+
+  postgres:
+    image: postgres:16
+    container_name: postgres_blog
+    restart: always
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres_blog:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+
+volumes:
+  postgres_blog:

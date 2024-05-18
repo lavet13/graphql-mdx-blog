@@ -33,7 +33,7 @@ const userExtension = Prisma.defineExtension(client => {
             throw new GraphQLError('Введен неверный пароль!');
           }
 
-          const token = createToken(user, { expiresIn: '1000' });
+          const token = createToken(user, { expiresIn: '10000' });
 
           return { token };
         },

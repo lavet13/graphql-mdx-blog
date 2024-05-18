@@ -8,11 +8,16 @@
   "scripts": {
     "dev": "vite",
     "build": "rm -rf dist && vite build",
+    "build:preview": "yarn build && yarn start:migrate:prod",
     "debug": "vite --debug --inspect-brk",
-    "serve": "cross-env NODE_ENV=production node dist/main.js"
+    "docker": "docker-compose up -d",
+    "docker:dev": "docker-compose -f docker-compose.dev.yml up -d",
+    "docker:dev:stop": "docker-compose -f docker-compose.dev.yml down",
+    "start:prod": "cross-env NODE_ENV=production node dist/main.js",
+    "start:migrate:prod": "npx prisma migrate deploy && yarn start:prod"
   },
   "keywords": [
-    "apollo-server",
+    "graphql-yoga",
     "prizma",
     "vite",
     "typescript",
@@ -23,7 +28,8 @@
     "email": "lavet13@mail.ru"
   },
   "prisma": {
-    "schema": "./src/prisma/schema.prisma"
+    "schema": "./src/prisma/schema.prisma",
+    "seed": "tsx ./src/prisma/seed.ts"
   },
   "license": "MIT",
   "devDependencies": {
@@ -64,10 +70,12 @@
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
+    "dotenv-cli": "^7.4.2",
     "express": "^4.18.2",
     "graphql": "^16.8.1",
     "graphql-yoga": "^5.1.1",
     "jsonwebtoken": "^9.0.2",
+    "tsx": "^4.10.4",
     "uuid": "^9.0.1"
   }
 }

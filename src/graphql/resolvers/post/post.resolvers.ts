@@ -23,7 +23,7 @@ const resolvers: Resolvers = {
   Date: DateScalar,
 
   Query: {
-    me(_, __, ctx) {
+    async me(_, __, ctx) {
       console.log({ me: ctx.me });
       return ctx.prisma.user.findFirst({
         where: {
