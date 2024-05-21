@@ -28,7 +28,9 @@ export const isAuthenticated =
       if (error instanceof Error) {
         await context.request.cookieStore?.delete('authorization');
 
-        throw new GraphQLError(error.message);
+        throw new GraphQLError(error.message, {
+            extensions: { statusCode: 401 },
+        });
       }
     }
 
