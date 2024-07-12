@@ -1,7 +1,7 @@
 {
-  "name": "apollo-prizma-vite-ts",
+  "name": "graphql-yoga-prizma-vite-ts",
   "version": "1.0.0",
-  "description": "Node JS project with Apollo and Prizma",
+  "description": "Node JS project with GraphQL-Yoga and Prizma",
   "type": "module",
   "main": "dist/main.js",
   "private": "true",

@@ -4,7 +4,7 @@ import generatePasswordHash from '../utils/auth/generate-password-hash';
 let countDown = 0;
 
 export default async function seed() {
-  const password = 'negr';
+  const password = 'password';
 
   console.log({ countDown, isCreated: countDown > 0 });
   if (countDown > 0) {
@@ -23,8 +23,8 @@ export default async function seed() {
 
   const firstUser = await prisma.user.create({
     data: {
-      email: 'negr@mail.ru',
-      name: 'negr',
+      email: 'user@mail.ru',
+      name: 'user',
       password: hash,
       profile: {
         create: {
@@ -216,3 +216,5 @@ export default async function seed() {
 
   console.log({ firstUser, secondUser, thirdUser, category });
 }
+
+seed();

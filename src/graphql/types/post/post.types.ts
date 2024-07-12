@@ -5,13 +5,6 @@ export default gql`
 
   union SearchResultPA = Post | User
 
-  type PageInfo {
-    startCursor: Int
-    endCursor: Int
-    hasNextPage: Boolean!
-    hasPreviousPage: Boolean!
-  }
-
   input ProfileInput {
     bio: String!
   }
@@ -25,6 +18,13 @@ export default gql`
     email: String!
     name: String!
     password: String!
+  }
+
+  type PageInfo {
+    startCursor: Int
+    endCursor: Int
+    hasNextPage: Boolean!
+    hasPreviousPage: Boolean!
   }
 
   input PostsInput {
